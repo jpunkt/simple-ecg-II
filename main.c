@@ -12,19 +12,17 @@
 #define FRAME_X 3
 #define FRAME_Y 12
 
-#define FRAME_WIDTH (DISP_WIDTH - FRAME_X)
+#define FRAME_WIDTH (DISP_WIDTH - 4)
 #define FRAME_HEIGHT (DISP_HEIGHT - FRAME_Y)
 
 u8g2_t u8g2;
 
-int16_t values[FRAME_WIDTH][2];
+int16_t valbuffer[FRAME_WIDTH];
+int16_t values[FRAME_WIDTH];
 int16_t buffer[8];
 
-uint16_t glob_t = 0;
 uint8_t b_k = 0;
 uint8_t b_i = 0;
-
-uint16_t adcValue10bit;
 
 uint16_t discFun(uint16_t t) {
     double A = 512;
@@ -33,27 +31,29 @@ uint16_t discFun(uint16_t t) {
 }
 
 uint16_t transformY(uint16_t y) {
-    return 140 - (y / 6);
+    uint16_t tmp = 140 - (y / 6);
+    return (tmp > 124 || tmp < 9) ? 124 : tmp;
 }
 
 ISR(TIMER0_COMPA_vect) {
-    //buffer[b_k] = transformY(discFun(glob_t));  //TODO set from analog in
+    //buffer[b_k] = discFun(glob_t);  //TODO set from analog in
     buffer[b_k] = ADC;
     b_k = (b_k < 7) ? b_k+1 : 0;
-    glob_t = (glob_t < 232 * 4) ? glob_t+1 : 0;
-    //glob_t++;
 
-    if (0 == glob_t % 8) {
-        values[b_i][0] = transformY((buffer[0] + buffer[1] + buffer[2] + buffer[3] + buffer[4] + buffer[5] + buffer[6] + buffer[7]) / 8);
-        values[b_i][1] = (buffer[7] - buffer[0]) / 10;
-        b_i = (b_i < 232) ? b_i + 1 : 0;
+    if (0 == b_k) {
+        //uint16_t tmpY = transformY((buffer[0] + buffer[1] + buffer[2] + buffer[3] + buffer[4] + buffer[5] + buffer[6] + buffer[7]) / 8);
+        //uint16_t tmpLen = values[b_i-1][0] - tmpY;
+        //values[b_i][0] = tmpY;
+        //values[b_i][1] = tmpLen;
+        valbuffer[b_i] = transformY((buffer[0] + buffer[1] + buffer[2] + buffer[3] + buffer[4] + buffer[5] + buffer[6] + buffer[7]) / 8);
+        b_i = (b_i < FRAME_WIDTH) ? b_i + 1 : 0;
     }
 }
 
 void init(void) {
     // Set timers
     TCCR0A |= (1 << WGM01); // Set the Timer Mode to CTC
-    OCR0A = 20;  // TODO Set to 15 (= 5ms @ prescaler 1024)
+    OCR0A = 15;  // TODO Set to 15 (= 5ms @ prescaler 1024)
     TIMSK0 |= (1 << OCIE0A);    //Set the ISR COMPA vect
 
     sei();         //enable interrupts
@@ -75,46 +75,30 @@ void init(void) {
     u8g2_InitDisplay(&u8g2); // send init sequence to the display, display is in sleep mode after this,
     u8g2_SetPowerSave(&u8g2, 0); // wake up display
     u8g2_ClearDisplay(&u8g2);
+
+    // initialize value buffers
+    /*for (int i = 0; i < sizeof(values); ++i) {
+        valbuffer[i] = 0;
+        values[i] = 0;
+    }*/
 }
 
 void drawFrame(void) {
     u8g2_SetFont(&u8g2, u8g2_font_5x7_tf);
     u8g2_DrawStr(&u8g2, (DISP_WIDTH / 2) - (15*5/2), 8, "Simple ECG v0.1");
 
-    char *tempstr = "     ";
-    sprintf(tempstr, "t:%3i", glob_t);
-
-    u8g2_DrawStr(&u8g2, (DISP_WIDTH - 25), 8, tempstr);
-
-    //u8g2_SetDrawColor(&u8g2, 1);
     u8g2_DrawFrame(&u8g2, 2, 10, FRAME_WIDTH, FRAME_HEIGHT);
 }
 
 
 void drawData() {
-    for (int i = 0; i < sizeof(values); ++i) {
+    for (int i = 0; i < FRAME_WIDTH; ++i) {
 
-        /*uint8_t translen = ceil(fabs(values[i][1]) / 10);
-        uint8_t transy = 0;
-
-        if (values[i][1] < -1) {
-            transy = transformY(values[i][0]) + translen / 2;
-        } else if (values[i][1] > 1) {
-            transy = transformY(values[i][0]) - translen / 2;
+        if(i == 0 || values[i-1] == 0) {
+            u8g2_DrawPixel(&u8g2, i+2, values[i]);
         } else {
-            transy = transformY(values[i][0]);
-        }*/
-        //uint8_t translen = ceil(fabs(values[i][1]) / 10);
-        //uint8_t transy = transformY(values[i][0]);
-        //uint8_t y1 = values[i][0];
-        //if (values[i][1] <= 1) {
-            u8g2_DrawPixel(&u8g2, i+3, values[i][0]);
-        //} else {
-        //    u8g2_DrawLine(&u8g2, i+3, values[i][0], i+3, values[i][0]+values[i][1]);
-        //}
-        //for (int j = 0; j < translen; ++j) {
-            //u8g2_DrawVLine(&u8g2, i+3, transformY(values[i][0])-translen/2, translen);
-        //}
+            u8g2_DrawLine(&u8g2, i+2, values[i], i+3, values[i-1]);
+        }
     }
 }
 
@@ -125,6 +109,8 @@ int main(void)
 
     while (1) {
 
+
+        //cli();
         u8g2_FirstPage(&u8g2);
         do {
             drawFrame();
@@ -142,6 +128,10 @@ int main(void)
             drawData();
 
         } while (u8g2_NextPage(&u8g2));
+        //sei();
 
+        for (int i = 0; i < FRAME_WIDTH; ++i) {
+            values[i] = valbuffer[i];
+        }
     }
 }
