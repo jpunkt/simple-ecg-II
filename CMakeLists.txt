@@ -1,3 +1,7 @@
+# CMake file for SimpleECG Version 0.1
+# Adapted from https://github.com/acristoffers/CMake-AVR/blob/master/Blink/CMakeLists.txt
+# Created by jpunkt on 3/1/2018
+
 CMAKE_MINIMUM_REQUIRED(VERSION 2.8.4)
 SET(CMAKE_SYSTEM_NAME Generic)
 
