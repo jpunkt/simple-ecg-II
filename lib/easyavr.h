@@ -1,3 +1,8 @@
+/*
+ * For Easy-ECG Version 0.1
+ * modified 2018 by jpunkt
+ */
+
 #ifndef __EASYAVR_H_
 #define __EASYAVR_H_
 

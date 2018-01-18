@@ -1,6 +1,7 @@
-//
-// Created by jpunkt on 1/3/18.
-//
+/*
+ * Version 0.1
+ * Created by jpunkt on 03-01-2018
+ */
 
 #ifndef SIMPLE_ECG_U8G2CALLBACK_H
 #define SIMPLE_ECG_U8G2CALLBACK_H

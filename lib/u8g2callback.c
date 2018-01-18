@@ -1,6 +1,7 @@
-//
-// Created by jpunkt on 1/3/18.
-//
+/*
+ * Version 0.1
+ * Created by jpunkt on 03-01-2018
+ */
 
 #include "u8g2callback.h"
 
