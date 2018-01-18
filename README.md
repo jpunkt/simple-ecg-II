@@ -1,4 +1,3 @@
-CMake project for CLion
+# Simple ECG
 
-Finally figured it out.  
-Just **git clone** & **File -> Import Project...** or **Import Project from Sources** in CLion
+A (very) simple 3-Point ECG for Atmega328p microcontroller.
